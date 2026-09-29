@@ -200,6 +200,21 @@ a {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 24px;
 }
+.dashboard-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin: -8px 0 14px;
+}
+.dashboard-toolbar label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.dashboard-toolbar .field-control {
+  max-width: 150px;
+}
 .summary-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -335,6 +350,9 @@ td {
   gap: 10px;
   margin-bottom: 16px;
 }
+.dashboard-request-toolbar {
+  margin: 12px 19px;
+}
 .search-field {
   position: relative;
   width: min(100%, 330px);
@@ -401,11 +419,54 @@ select.field-control {
   min-height: auto;
   padding: 5px 7px;
 }
+.button-delete {
+  background: #fff7f7;
+  border-color: #f0d1d1;
+  border-radius: 5px;
+  color: #a84444;
+  cursor: pointer;
+  min-height: auto;
+  padding: 4px 8px;
+}
+.button-delete:hover {
+  background: #fdeaea;
+  border-color: #e6b4b4;
+  color: #913434;
+}
 .empty-state {
   color: var(--muted);
   font-size: 13px;
   padding: 40px 20px;
   text-align: center;
+}
+.success-message {
+  background: #e8f5ee;
+  border: 1px solid #cce8d8;
+  border-radius: 6px;
+  color: #287850;
+  font-size: 12px;
+  margin: -7px 0 16px;
+  padding: 10px 13px;
+}
+.customer-name-button {
+  background: transparent;
+  border: 0;
+  color: #303c4e;
+  cursor: pointer;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+  text-align: left;
+}
+.customer-name-button:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.button:disabled,
+.icon-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 .table-footer {
   align-items: center;
@@ -762,6 +823,13 @@ select.field-control {
   }
   .toolbar select {
     flex: 1;
+  }
+  .dashboard-toolbar {
+    justify-content: space-between;
+    margin-top: -4px;
+  }
+  .dashboard-request-toolbar {
+    margin: 12px;
   }
   .login-layout {
     grid-template-columns: 1fr;

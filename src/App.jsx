@@ -16,22 +16,12 @@ function getFirstName(email) {
 
 function loadCustomers() {
   const savedCustomers = readStorage('customers', initialCustomers)
-  if (!Array.isArray(savedCustomers)) return initialCustomers
 
-  const seededCustomers = new Map(
-    initialCustomers.map((customer) => [customer.id, customer]),
-  )
-  return savedCustomers.map((customer) => {
-    const seededCustomer = seededCustomers.get(customer.id)
-    return seededCustomer
-      ? {
-          ...customer,
-          name: seededCustomer.name,
-          email: seededCustomer.email,
-          phone: seededCustomer.phone,
-        }
-      : customer
-  })
+  if (!Array.isArray(savedCustomers)) {
+    return initialCustomers
+  }
+
+  return savedCustomers
 }
 
 function ProtectedLayout({ onLogout, customers, userName }) {
@@ -99,6 +89,14 @@ function AppRoutes() {
     writeStorage('customers', updatedCustomers)
   }
 
+  function deleteCustomer(customerId) {
+    const updatedCustomers = customers.filter(
+      (customer) => customer.id !== customerId,
+    )
+    setCustomers(updatedCustomers)
+    writeStorage('customers', updatedCustomers)
+  }
+
   return (
     <Routes>
       <Route
@@ -134,7 +132,11 @@ function AppRoutes() {
         <Route
           path="/customers"
           element={
-            <Customers customers={customers} onAddCustomer={addCustomer} />
+            <Customers
+              customers={customers}
+              onAddCustomer={addCustomer}
+              onDeleteCustomer={deleteCustomer}
+            />
           }
         />
         <Route path="/service-requests" element={<ServiceRequests />} />

@@ -12,14 +12,16 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function CustomerModal({ customer, onClose, onSave }) {
   const [form, setForm] = useState(blankCustomer)
   const [errors, setErrors] = useState({})
+  const [isSaving, setIsSaving] = useState(false)
 
   function updateField(event) {
     setForm({ ...form, [event.target.name]: event.target.value })
     setErrors({ ...errors, [event.target.name]: '' })
   }
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault()
+    if (isSaving) return
     const nextErrors = {}
     if (!form.name.trim()) nextErrors.name = 'Name is required.'
     if (!form.email.trim()) nextErrors.email = 'Email is required.'
@@ -29,6 +31,8 @@ export default function CustomerModal({ customer, onClose, onSave }) {
     if (!form.service) nextErrors.service = 'Choose a service.'
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
+    setIsSaving(true)
+    await new Promise((resolve) => window.setTimeout(resolve, 200))
     onSave({
       ...form,
       name: form.name.trim(),
@@ -96,7 +100,9 @@ export default function CustomerModal({ customer, onClose, onSave }) {
   return (
     <div
       className="modal-backdrop"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onMouseDown={(event) =>
+        !isSaving && event.target === event.currentTarget && onClose()
+      }
     >
       <section
         className="modal"
@@ -109,7 +115,12 @@ export default function CustomerModal({ customer, onClose, onSave }) {
             <h2 id="add-customer-title">Add customer</h2>
             <p>Enter the customer’s contact and service details.</p>
           </div>
-          <button className="icon-button" aria-label="Close" onClick={onClose}>
+          <button
+            className="icon-button"
+            aria-label="Close"
+            disabled={isSaving}
+            onClick={onClose}
+          >
             ×
           </button>
         </div>
@@ -191,12 +202,18 @@ export default function CustomerModal({ customer, onClose, onSave }) {
             <button
               type="button"
               className="button button-secondary"
+              disabled={isSaving}
               onClick={onClose}
             >
               Cancel
             </button>
-            <button className="button button-primary" type="submit">
-              Save customer
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={isSaving}
+              aria-busy={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save customer'}
             </button>
           </div>
         </form>

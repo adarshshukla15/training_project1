@@ -71,28 +71,28 @@ export const serviceRequests = [
     customer: 'Aarav Sharma',
     service: 'Account access recovery',
     status: 'In Progress',
-    date: '2026-09-18',
+    date: '2026-09-29',
   },
   {
     id: 1002,
     customer: 'Ananya Iyer',
     service: 'Backup restore',
     status: 'Pending',
-    date: '2026-09-17',
+    date: '2026-09-28',
   },
   {
     id: 1003,
     customer: 'Rohan Mehta',
     service: 'Device diagnostics',
     status: 'Completed',
-    date: '2026-09-16',
+    date: '2026-09-25',
   },
   {
     id: 1004,
     customer: 'Arjun Kapoor',
     service: 'Plan upgrade assistance',
     status: 'Pending',
-    date: '2026-09-15',
+    date: '2026-09-20',
   },
   {
     id: 1005,
@@ -106,16 +106,37 @@ export const serviceRequests = [
     customer: 'Isha Banerjee',
     service: 'Cloud sync issue',
     status: 'Completed',
-    date: '2026-09-13',
+    date: '2026-09-03',
   },
   {
     id: 1007,
     customer: 'Vikram Reddy',
     service: 'Billing question',
     status: 'Pending',
-    date: '2026-09-12',
+    date: '2026-08-29',
   },
 ]
+
+export const dashboardMetrics = {
+  Today: {
+    totalCustomers: 2,
+    activeServices: 2,
+    pendingRequests: 1,
+    revenue: 1380,
+  },
+  'This Week': {
+    totalCustomers: 5,
+    activeServices: 4,
+    pendingRequests: 2,
+    revenue: 7280,
+  },
+  'This Month': {
+    totalCustomers: 8,
+    activeServices: 6,
+    pendingRequests: 3,
+    revenue: 18940,
+  },
+}
 
 export const servicePrices = {
   'Premium Support': 89,

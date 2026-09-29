@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import CustomerModal from '../components/CustomerModal.jsx'
 
-export default function Customers({ customers, onAddCustomer }) {
+export default function Customers({
+  customers,
+  onAddCustomer,
+  onDeleteCustomer,
+}) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [modalCustomer, setModalCustomer] = useState(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const query = search.trim().toLowerCase()
   const filteredCustomers = customers.filter((customer) => {
     const matchesSearch =
@@ -22,6 +27,20 @@ export default function Customers({ customers, onAddCustomer }) {
     setSearch('')
     setStatusFilter('All')
     setAddModalOpen(false)
+    setSuccessMessage(`${customer.name} was added successfully.`)
+  }
+
+  function deleteCustomer(customer) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${customer.name}?`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    onDeleteCustomer(customer.id)
+    setSuccessMessage(`${customer.name} was deleted successfully.`)
   }
 
   return (
@@ -34,11 +53,19 @@ export default function Customers({ customers, onAddCustomer }) {
         </div>
         <button
           className="button button-primary"
-          onClick={() => setAddModalOpen(true)}
+          onClick={() => {
+            setSuccessMessage('')
+            setAddModalOpen(true)
+          }}
         >
           <span aria-hidden="true">＋</span> Add customer
         </button>
       </div>
+      {successMessage && (
+        <div className="success-message" role="status">
+          {successMessage}
+        </div>
+      )}
 
       <div className="toolbar">
         <label className="search-field">
@@ -91,7 +118,12 @@ export default function Customers({ customers, onAddCustomer }) {
                           .join('')}
                       </span>
                       <div>
-                        <strong>{customer.name}</strong>
+                        <button
+                          className="customer-name-button"
+                          onClick={() => setModalCustomer(customer)}
+                        >
+                          {customer.name}
+                        </button>
                         <small>{customer.email}</small>
                       </div>
                     </div>
@@ -113,17 +145,27 @@ export default function Customers({ customers, onAddCustomer }) {
                     >
                       View
                     </button>
+                    <button
+                      className="button button-delete"
+                      onClick={() => deleteCustomer(customer)}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {filteredCustomers.length === 0 && (
+        {customers.length === 0 ? (
           <div className="empty-state">
-            No customers match your search. Try another name or status.
+            No customers yet. Add a customer to get started.
           </div>
-        )}
+        ) : filteredCustomers.length === 0 ? (
+          <div className="empty-state">
+            No search results. Try another name or status.
+          </div>
+        ) : null}
         <div className="table-footer">
           <span>
             {filteredCustomers.length}{' '}
