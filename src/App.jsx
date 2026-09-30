@@ -9,6 +9,8 @@ import ServiceRequests from './pages/ServiceRequests.jsx'
 import { initialCustomers } from './data/mockData.js'
 import { readStorage, writeStorage } from './utils/storage.js'
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 function getFirstName(email) {
   const firstName = email?.split('@')[0]?.split(/[._+-]/)[0]
   return firstName ? firstName[0].toUpperCase() + firstName.slice(1) : 'User'
@@ -21,7 +23,50 @@ function loadCustomers() {
     return initialCustomers
   }
 
-  return savedCustomers
+  const seenIds = new Set()
+  return savedCustomers.filter((customer) => {
+    if (
+      !customer ||
+      typeof customer !== 'object' ||
+      !['string', 'number'].includes(typeof customer.id) ||
+      !String(customer.id).trim() ||
+      seenIds.has(String(customer.id)) ||
+      typeof customer.name !== 'string' ||
+      !customer.name.trim() ||
+      typeof customer.email !== 'string' ||
+      !emailPattern.test(customer.email.trim()) ||
+      typeof customer.phone !== 'string' ||
+      !customer.phone.trim() ||
+      typeof customer.service !== 'string' ||
+      !customer.service.trim() ||
+      !['Active', 'Inactive'].includes(customer.status)
+    ) {
+      return false
+    }
+
+    seenIds.add(String(customer.id))
+    return true
+  }).map((customer) => ({
+    ...customer,
+    name: customer.name.trim(),
+    email: customer.email.trim(),
+    phone: customer.phone.trim(),
+    service: customer.service.trim(),
+  }))
+}
+
+function loadAuth() {
+  const savedAuth = readStorage('auth', false)
+  if (
+    !savedAuth ||
+    typeof savedAuth !== 'object' ||
+    typeof savedAuth.email !== 'string' ||
+    !emailPattern.test(savedAuth.email.trim())
+  ) {
+    return false
+  }
+
+  return { email: savedAuth.email.trim() }
 }
 
 function ProtectedLayout({ onLogout, customers, userName }) {
@@ -62,7 +107,7 @@ function ProtectedLayout({ onLogout, customers, userName }) {
 }
 
 function AppRoutes() {
-  const [auth, setAuth] = useState(() => readStorage('auth', false))
+  const [auth, setAuth] = useState(loadAuth)
   const isAuthenticated = Boolean(auth)
   const userName =
     auth && typeof auth === 'object' ? getFirstName(auth.email) : 'User'
@@ -84,17 +129,29 @@ function AppRoutes() {
   }
 
   function addCustomer(customer) {
+    const duplicateEmail = customers.some(
+      (existingCustomer) =>
+        existingCustomer.email.toLowerCase() === customer.email.toLowerCase(),
+    )
+    if (duplicateEmail) return false
+
     const updatedCustomers = [customer, ...customers]
     setCustomers(updatedCustomers)
     writeStorage('customers', updatedCustomers)
+    return true
   }
 
   function deleteCustomer(customerId) {
+    if (!customers.some((customer) => customer.id === customerId)) {
+      return false
+    }
+
     const updatedCustomers = customers.filter(
       (customer) => customer.id !== customerId,
     )
     setCustomers(updatedCustomers)
     writeStorage('customers', updatedCustomers)
+    return true
   }
 
   return (

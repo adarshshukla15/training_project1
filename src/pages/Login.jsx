@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -7,16 +7,30 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submissionLock = useRef(false)
 
   function submit(event) {
     event.preventDefault()
+    if (submissionLock.current) return
+
     const nextErrors = {}
-    if (!email.trim()) nextErrors.email = 'Email is required.'
+    if (!email.trim()) nextErrors.email = 'Please enter your email.'
     else if (!emailPattern.test(email.trim()))
-      nextErrors.email = 'Enter a valid email address.'
-    if (!password) nextErrors.password = 'Password is required.'
+      nextErrors.email = 'Please enter a valid email address.'
+    if (!password) nextErrors.password = 'Please enter your password.'
     setErrors(nextErrors)
-    if (!Object.keys(nextErrors).length) onLogin(email.trim())
+    if (Object.keys(nextErrors).length) return
+
+    submissionLock.current = true
+    setIsSubmitting(true)
+    try {
+      onLogin(email.trim())
+    } catch {
+      submissionLock.current = false
+      setIsSubmitting(false)
+      setErrors({ form: 'Unable to sign in right now. Please try again.' })
+    }
   }
 
   return (
@@ -54,13 +68,21 @@ export default function Login({ onLogin }) {
                   autoComplete="username"
                   type="email"
                   value={email}
+                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby={errors.email ? 'login-email-error' : undefined}
                   onChange={(event) => {
                     setEmail(event.target.value)
-                    setErrors({ ...errors, email: '' })
+                    setErrors((currentErrors) => ({
+                      ...currentErrors,
+                      email: '',
+                      form: '',
+                    }))
                   }}
                 />
                 {errors.email && (
-                  <span className="field-error">{errors.email}</span>
+                  <span className="field-error" id="login-email-error">
+                    {errors.email}
+                  </span>
                 )}
               </div>
               <div className="form-field">
@@ -72,9 +94,17 @@ export default function Login({ onLogin }) {
                     autoComplete="current-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby={
+                      errors.password ? 'login-password-error' : undefined
+                    }
                     onChange={(event) => {
                       setPassword(event.target.value)
-                      setErrors({ ...errors, password: '' })
+                      setErrors((currentErrors) => ({
+                        ...currentErrors,
+                        password: '',
+                        form: '',
+                      }))
                     }}
                   />
                   <button
@@ -93,11 +123,24 @@ export default function Login({ onLogin }) {
                   </button>
                 </div>
                 {errors.password && (
-                  <span className="field-error">{errors.password}</span>
+                  <span className="field-error" id="login-password-error">
+                    {errors.password}
+                  </span>
                 )}
               </div>
-              <button className="button button-primary" type="submit">
-                Sign in <span aria-hidden="true">→</span>
+              {errors.form && (
+                <div className="field-error" role="alert">
+                  {errors.form}
+                </div>
+              )}
+              <button
+                className="button button-primary"
+                type="submit"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? 'Signing in...' : 'Sign in'}{' '}
+                <span aria-hidden="true">→</span>
               </button>
             </div>
             <div className="login-help">

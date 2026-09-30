@@ -6,7 +6,8 @@ import { dashboardMetrics, serviceRequests } from '../data/mockData.js'
 const periods = ['Today', 'This Week', 'This Month']
 
 function statusClass(status) {
-  return `status-${status.toLowerCase().replaceAll(' ', '-')}`
+
+  return `status-${String(status || '').toLowerCase().replaceAll(' ', '-')}`
 }
 
 function getPeriodStart(period, today) {
@@ -20,36 +21,60 @@ function getPeriodStart(period, today) {
   return start
 }
 
+function getRequestDate(date) {
+  if (typeof date !== 'string' || !date.trim()) return null
+  const requestDate = new Date(`${date}T12:00:00`)
+  return Number.isNaN(requestDate.getTime()) ? null : requestDate
+}
+
+function searchableValue(value) {
+  return value === null || value === undefined ? '' : String(value)
+}
+
 export default function Dashboard() {
-  const { userName } = useOutletContext()
+  const { userName, customers } = useOutletContext()
+  const customerList = Array.isArray(customers) ? customers : []
   const [period, setPeriod] = useState('This Month')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortOrder, setSortOrder] = useState('Newest first')
-  const metrics = dashboardMetrics[period]
+  const selectedPeriod = periods.includes(period) ? period : 'This Month'
+  const metrics = dashboardMetrics[selectedPeriod] ?? { revenue: 0 }
   const today = new Date()
   const endDate = new Date(today)
   endDate.setHours(23, 59, 59, 999)
-  const startDate = getPeriodStart(period, today)
+  const startDate = getPeriodStart(selectedPeriod, today)
   const query = search.trim().toLowerCase()
-  const recentRequests = serviceRequests
+  const requestsForPeriod = (Array.isArray(serviceRequests) ? serviceRequests : [])
     .filter((request) => {
-      const requestDate = new Date(`${request.date}T12:00:00`)
-      const matchesPeriod = requestDate >= startDate && requestDate <= endDate
+      if (!request || typeof request !== 'object') return false
+      const requestDate = getRequestDate(request.date)
+      return requestDate && requestDate >= startDate && requestDate <= endDate
+    })
+  const pendingRequests = requestsForPeriod.filter(
+    (request) => request.status === 'Pending',
+  ).length
+  const recentRequests = requestsForPeriod
+    .filter((request) => {
       const matchesSearch =
-        request.customer.toLowerCase().includes(query) ||
-        request.service.toLowerCase().includes(query) ||
-        String(request.id).includes(query)
+        searchableValue(request.customer).toLowerCase().includes(query) ||
+        searchableValue(request.service).toLowerCase().includes(query) ||
+        searchableValue(request.id).toLowerCase().includes(query)
       const matchesStatus =
         statusFilter === 'All' || request.status === statusFilter
-      return matchesPeriod && matchesSearch && matchesStatus
+      return matchesSearch && matchesStatus
     })
     .sort((first, second) => {
       if (sortOrder === 'Customer A-Z') {
-        return first.customer.localeCompare(second.customer)
+        return searchableValue(first.customer).localeCompare(
+          searchableValue(second.customer),
+        )
       }
-      const dateOrder = first.date.localeCompare(second.date)
-      return sortOrder === 'Oldest first' ? dateOrder : -dateOrder
+      const firstDate = getRequestDate(first.date)?.getTime() ?? 0
+      const secondDate = getRequestDate(second.date)?.getTime() ?? 0
+      return sortOrder === 'Oldest first'
+        ? firstDate - secondDate
+        : secondDate - firstDate
     })
     .slice(0, 5)
 
@@ -78,23 +103,23 @@ export default function Dashboard() {
       <section className="summary-grid" aria-label="Service overview">
         <SummaryCard
           label="Total customers"
-          value={metrics.totalCustomers}
-          detail={`Accounts in ${period.toLowerCase()}`}
+          value={customerList.length}
+          detail="Current customer accounts"
         />
         <SummaryCard
           label="Active services"
-          value={metrics.activeServices}
-          detail={`Plans in ${period.toLowerCase()}`}
+          value={customerList.filter((customer) => customer.status === 'Active').length}
+          detail="Current active accounts"
         />
         <SummaryCard
           label="Pending requests"
-          value={metrics.pendingRequests}
-          detail={`Awaiting response in ${period.toLowerCase()}`}
+          value={pendingRequests}
+          detail={`Awaiting response in ${selectedPeriod.toLowerCase()}`}
         />
         <SummaryCard
           label="Revenue"
-          value={`$${metrics.revenue.toLocaleString()}`}
-          detail={`Mock revenue for ${period.toLowerCase()}`}
+          value={`$${(Number.isFinite(metrics.revenue) ? metrics.revenue : 0).toLocaleString()}`}
+          detail={`Mock revenue for ${selectedPeriod.toLowerCase()}`}
         />
       </section>
       <section className="panel">
@@ -153,21 +178,24 @@ export default function Dashboard() {
               {recentRequests.map((request) => (
                 <tr key={request.id}>
                   <td>
-                    <strong>{request.customer}</strong>
+                    <strong>
+                      {searchableValue(request.customer) || 'Not available'}
+                    </strong>
                   </td>
-                  <td>{request.service}</td>
+                  <td>{searchableValue(request.service) || 'Not available'}</td>
                   <td>
                     <span
                       className={`status-badge ${statusClass(request.status)}`}
                     >
-                      {request.status}
+                      {searchableValue(request.status) || 'Not available'}
                     </span>
                   </td>
                   <td>
-                    {new Date(`${request.date}T12:00:00`).toLocaleDateString(
-                      'en-US',
-                      { month: 'short', day: 'numeric', year: 'numeric' },
-                    )}
+                    {getRequestDate(request.date)?.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    }) || 'Not available'}
                   </td>
                 </tr>
               ))}

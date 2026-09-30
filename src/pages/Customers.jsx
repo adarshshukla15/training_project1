@@ -11,23 +11,38 @@ export default function Customers({
   const [modalCustomer, setModalCustomer] = useState(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const customerList = Array.isArray(customers)
+    ? customers.filter(
+        (customer) =>
+          customer &&
+          typeof customer.name === 'string' &&
+          typeof customer.email === 'string' &&
+          typeof customer.status === 'string',
+      )
+    : []
   const query = search.trim().toLowerCase()
-  const filteredCustomers = customers.filter((customer) => {
+  const validStatusFilters = ['All', 'Active', 'Inactive']
+  const selectedStatus = validStatusFilters.includes(statusFilter)
+    ? statusFilter
+    : 'All'
+  const filteredCustomers = customerList.filter((customer) => {
     const matchesSearch =
       customer.name.toLowerCase().includes(query) ||
       customer.email.toLowerCase().includes(query)
     const matchesStatus =
-      statusFilter === 'All' || customer.status === statusFilter
+      selectedStatus === 'All' || customer.status === selectedStatus
 
     return matchesSearch && matchesStatus
   })
 
   function saveCustomer(customer) {
-    onAddCustomer(customer)
+    const saved = onAddCustomer(customer)
+    if (saved === false) return
     setSearch('')
     setStatusFilter('All')
     setAddModalOpen(false)
     setSuccessMessage(`${customer.name} was added successfully.`)
+    return true
   }
 
   function deleteCustomer(customer) {
@@ -39,8 +54,12 @@ export default function Customers({
       return
     }
 
-    onDeleteCustomer(customer.id)
-    setSuccessMessage(`${customer.name} was deleted successfully.`)
+    const deleted = onDeleteCustomer(customer.id)
+    setSuccessMessage(
+      deleted
+        ? `${customer.name} was deleted successfully.`
+        : 'This customer was already removed.',
+    )
   }
 
   return (
@@ -84,7 +103,7 @@ export default function Customers({
         <select
           className="field-control"
           aria-label="Filter by status"
-          value={statusFilter}
+            value={selectedStatus}
           onChange={(event) => setStatusFilter(event.target.value)}
         >
           <option>All</option>
@@ -157,14 +176,12 @@ export default function Customers({
             </tbody>
           </table>
         </div>
-        {customers.length === 0 ? (
+        {customerList.length === 0 ? (
           <div className="empty-state">
             No customers yet. Add a customer to get started.
           </div>
         ) : filteredCustomers.length === 0 ? (
-          <div className="empty-state">
-            No search results. Try another name or status.
-          </div>
+          <div className="empty-state">No customers found.</div>
         ) : null}
         <div className="table-footer">
           <span>
@@ -176,6 +193,7 @@ export default function Customers({
       </section>
       {addModalOpen && (
         <CustomerModal
+          customers={customerList}
           onClose={() => setAddModalOpen(false)}
           onSave={saveCustomer}
         />

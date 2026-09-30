@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 const blankCustomer = {
   name: '',
@@ -9,37 +9,79 @@ const blankCustomer = {
 }
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function CustomerModal({ customer, onClose, onSave }) {
+function displayValue(value) {
+  return value === null || value === undefined || value === ''
+    ? 'Not available'
+    : String(value)
+}
+
+export default function CustomerModal({
+  customer,
+  customers = [],
+  onClose,
+  onSave,
+}) {
   const [form, setForm] = useState(blankCustomer)
   const [errors, setErrors] = useState({})
-  const [isSaving, setIsSaving] = useState(false)
+  const submissionLock = useRef(false)
 
   function updateField(event) {
     setForm({ ...form, [event.target.name]: event.target.value })
-    setErrors({ ...errors, [event.target.name]: '' })
+    setErrors((currentErrors) => ({
+      ...currentErrors,
+      [event.target.name]: '',
+      form: '',
+    }))
   }
 
-  async function submit(event) {
+  function submit(event) {
     event.preventDefault()
-    if (isSaving) return
+    if (submissionLock.current) return
     const nextErrors = {}
     if (!form.name.trim()) nextErrors.name = 'Name is required.'
+    else if (form.name.trim().length < 2)
+      nextErrors.name = 'Name must be at least 2 characters.'
     if (!form.email.trim()) nextErrors.email = 'Email is required.'
     else if (!emailPattern.test(form.email.trim()))
       nextErrors.email = 'Enter a valid email address.'
     if (!form.phone.trim()) nextErrors.phone = 'Phone is required.'
+    else {
+      const phone = form.phone.trim()
+      const digitCount = phone.replace(/\D/g, '').length
+      if (!/^\+?[\d().\s-]+$/.test(phone) || digitCount < 7 || digitCount > 15)
+        nextErrors.phone = 'Enter a valid phone number.'
+    }
     if (!form.service) nextErrors.service = 'Choose a service.'
+    if (
+      form.email.trim() &&
+      customers.some(
+        (existingCustomer) =>
+          existingCustomer.email.toLowerCase() ===
+          form.email.trim().toLowerCase(),
+      )
+    ) {
+      nextErrors.email = 'Customer with this email already exists.'
+    }
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
-    setIsSaving(true)
-    await new Promise((resolve) => window.setTimeout(resolve, 200))
-    onSave({
-      ...form,
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      id: Date.now(),
-    })
+    submissionLock.current = true
+    try {
+      const saved = onSave({
+        ...form,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        service: form.service.trim(),
+        id: Date.now(),
+      })
+      if (saved === false) {
+        setErrors({ email: 'Customer with this email already exists.' })
+        submissionLock.current = false
+      }
+    } catch {
+      setErrors({ form: 'Unable to save this customer. Please try again.' })
+      submissionLock.current = false
+    }
   }
 
   if (customer)
@@ -80,14 +122,14 @@ export default function CustomerModal({ customer, onClose, onSave }) {
               <div className="detail-row" key={label}>
                 <div className="detail-label">{label}</div>
                 <div className="detail-value">
-                  {label === 'Status' ? (
+                  {label === 'Status' && displayValue(value) !== 'Not available' ? (
                     <span
-                      className={`status-badge status-${value.toLowerCase()}`}
+                      className={`status-badge status-${displayValue(value).toLowerCase()}`}
                     >
-                      {value}
+                      {displayValue(value)}
                     </span>
                   ) : (
-                    value
+                    displayValue(value)
                   )}
                 </div>
               </div>
@@ -101,7 +143,7 @@ export default function CustomerModal({ customer, onClose, onSave }) {
     <div
       className="modal-backdrop"
       onMouseDown={(event) =>
-        !isSaving && event.target === event.currentTarget && onClose()
+          event.target === event.currentTarget && onClose()
       }
     >
       <section
@@ -118,7 +160,6 @@ export default function CustomerModal({ customer, onClose, onSave }) {
           <button
             className="icon-button"
             aria-label="Close"
-            disabled={isSaving}
             onClick={onClose}
           >
             ×
@@ -132,11 +173,16 @@ export default function CustomerModal({ customer, onClose, onSave }) {
                 id="customer-name"
                 className="field-control"
                 name="name"
+                maxLength={100}
                 value={form.name}
                 onChange={updateField}
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? 'customer-name-error' : undefined}
               />
               {errors.name && (
-                <span className="field-error">{errors.name}</span>
+                <span className="field-error" id="customer-name-error">
+                  {errors.name}
+                </span>
               )}
             </div>
             <div className="form-field">
@@ -146,11 +192,16 @@ export default function CustomerModal({ customer, onClose, onSave }) {
                 className="field-control"
                 name="email"
                 type="email"
+                maxLength={254}
                 value={form.email}
                 onChange={updateField}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'customer-email-error' : undefined}
               />
               {errors.email && (
-                <span className="field-error">{errors.email}</span>
+                <span className="field-error" id="customer-email-error">
+                  {errors.email}
+                </span>
               )}
             </div>
             <div className="form-field">
@@ -160,11 +211,16 @@ export default function CustomerModal({ customer, onClose, onSave }) {
                 className="field-control"
                 name="phone"
                 type="tel"
+                maxLength={24}
                 value={form.phone}
                 onChange={updateField}
+                aria-invalid={Boolean(errors.phone)}
+                aria-describedby={errors.phone ? 'customer-phone-error' : undefined}
               />
               {errors.phone && (
-                <span className="field-error">{errors.phone}</span>
+                <span className="field-error" id="customer-phone-error">
+                  {errors.phone}
+                </span>
               )}
             </div>
             <div className="form-field">
@@ -198,11 +254,15 @@ export default function CustomerModal({ customer, onClose, onSave }) {
               </select>
             </div>
           </div>
+          {errors.form && (
+            <div className="field-error" role="alert">
+              {errors.form}
+            </div>
+          )}
           <div className="modal-actions">
             <button
               type="button"
               className="button button-secondary"
-              disabled={isSaving}
               onClick={onClose}
             >
               Cancel
@@ -210,10 +270,8 @@ export default function CustomerModal({ customer, onClose, onSave }) {
             <button
               className="button button-primary"
               type="submit"
-              disabled={isSaving}
-              aria-busy={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save customer'}
+              Save customer
             </button>
           </div>
         </form>
